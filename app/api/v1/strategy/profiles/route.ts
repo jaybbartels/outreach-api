@@ -3,6 +3,17 @@ import { StrategyService } from '@/lib/services/StrategyService'
 
 const service = new StrategyService()
 
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  })
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -10,13 +21,19 @@ export async function GET(request: NextRequest) {
 
     const profiles = await service.getProfiles(userId || undefined)
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: { profiles }
     })
+    
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type')
+    
+    return response
   } catch (error) {
     console.error('GET /strategy/profiles error:', error)
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: false,
         error: {
@@ -25,6 +42,8 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     )
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    return response
   }
 }
 
@@ -34,13 +53,19 @@ export async function POST(request: NextRequest) {
 
     const profile = await service.createProfile(body)
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: profile
     })
+    
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type')
+    
+    return response
   } catch (error) {
     console.error('POST /strategy/profiles error:', error)
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: false,
         error: {
@@ -49,5 +74,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     )
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    return response
   }
 }
