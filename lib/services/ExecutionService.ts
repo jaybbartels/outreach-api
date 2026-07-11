@@ -32,6 +32,16 @@ export class ExecutionService extends BaseService {
     })
   }
 
+  // Bulk create prepared messages (for export + downstream send tool)
+  async bulkCreateMessages(rows: any[]) {
+    const { data, error } = await this.client
+      .from('campaign_messages')
+      .insert(rows)
+      .select()
+    if (error) throw error
+    return data
+  }
+
   // Update campaign
   async updateCampaign(campaignId: string, data: any) {
     return this.update('campaigns', campaignId, data)
