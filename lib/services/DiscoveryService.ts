@@ -32,7 +32,7 @@ export class DiscoveryService extends BaseService {
 
     if (!collections.length) throw new Error('Collection not found')
 
-    const col = collections[0]
+    const col = collections[0] as any
 
     // Get executives in collection
     const { data: executives } = await this.client
@@ -122,7 +122,8 @@ export class DiscoveryService extends BaseService {
       })
     }
 
-    return await this.update('collection_health', health[0].id, {
+    const healthRecord = health[0] as any
+    return await this.update('collection_health', healthRecord.id, {
       refresh_frequency: frequency,
       monitored: enabled,
       monitoring_status: enabled ? 'active' : 'inactive',
