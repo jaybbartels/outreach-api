@@ -4,6 +4,18 @@ import { supabase } from '@/lib/supabase'
 
 const service = new DiscoveryService()
 
+// Handle CORS preflight
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  })
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -11,14 +23,20 @@ export async function GET(request: NextRequest) {
 
     const collections = await service.getCollections(userId || undefined)
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: { collections },
       meta: { timestamp: new Date().toISOString() }
     })
+    
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type')
+    
+    return response
   } catch (error) {
     console.error('GET /discover/collections error:', error)
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: false,
         error: {
@@ -27,6 +45,8 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     )
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    return response
   }
 }
 
@@ -34,7 +54,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    // Validate
     if (!body.name || !body.description) {
       return NextResponse.json(
         { success: false, error: { message: 'Name and description required' } },
@@ -42,7 +61,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create collection
     const { data: collection, error } = await supabase
       .from('collections')
       .insert([
@@ -57,18 +75,23 @@ export async function POST(request: NextRequest) {
 
     if (error || !collection) throw new Error('Failed to create collection')
 
-    // Create health record
     await supabase
       .from('collection_health')
       .insert([{ collection_id: collection.id }])
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: collection
     })
+    
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type')
+    
+    return response
   } catch (error) {
     console.error('POST /discover/collections error:', error)
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: false,
         error: {
@@ -77,5 +100,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     )
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    return response
   }
 }
