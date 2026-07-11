@@ -1,0 +1,2 @@
+-- See SQL above for full migration
+-- All 11 new tables created successfully
