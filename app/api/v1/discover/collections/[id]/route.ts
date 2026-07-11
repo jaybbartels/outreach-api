@@ -5,16 +5,17 @@ const service = new DiscoveryService()
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const detail = await service.getCollectionDetail(params.id)
+    const { id } = await params
+    const detail = await service.getCollectionDetail(id)
     return NextResponse.json({
       success: true,
       data: detail
     })
   } catch (error) {
-    console.error(`GET /discover/collections/${params.id} error:`, error)
+    console.error(`GET /discover/collections error:`, error)
     return NextResponse.json(
       {
         success: false,
