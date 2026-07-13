@@ -57,14 +57,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const slug = body.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36)
+
     const { data: collection, error } = await supabase
       .from('collections')
       .insert([
         {
           name: body.name,
+          slug,
           description: body.description || null,
           icon: body.icon || '📂',
-          user_id: body.user_id || 'demo-user-001'
+          created_by: body.created_by || 'demo-user-001',
+          is_public: body.is_public !== false
         }
       ])
       .select()
