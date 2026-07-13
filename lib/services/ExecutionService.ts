@@ -32,15 +32,80 @@ export class ExecutionService extends BaseService {
     })
   }
 
-  // Bulk create prepared messages (for export + downstream send tool)
+  // Bulk create prepared messages, plus tracked links for each one
   async bulkCreateMessages(rows: any[]) {
-    const { data, error } = await this.client
+    const insertRows = rows.map(({ learn_more_token, response_token, ...rest }) => rest)
+
+    const { data: inserted, error } = await this.client
       .from('campaign_messages')
-      .insert(rows)
+      .insert(insertRows)
       .select()
     if (error) throw error
-    return data
+
+    // Create tracked link rows for each message (learn_more + request_response)
+    const linkRows: any[] = []
+    inserted?.forEach((msg: any, idx: number) => {
+      const original = rows[idx]
+      if (original.learn_more_token) {
+        linkRows.push({
+          campaign_message_id: msg.id,
+          link_type: 'learn_more',
+          token: original.learn_more_token
+        })
+      }
+      if (original.response_token) {
+        linkRows.push({
+          campaign_message_id: msg.id,
+          link_type: 'request_response',
+          token: original.response_token
+        })
+      }
+    })
+
+    if (linkRows.length > 0) {
+      const { error: linkError } = await this.client
+        .from('message_links')
+        .insert(linkRows)
+      if (linkError) throw linkError
+    }
+
+    return inserted
   }
+
+  // Look up a tracked link by token, log the click, return context for redirect
+  async resolveTrackedLink(token: string, userAgent?: string, ipAddress?: string) {
+    const { data: link, error: linkError } = await this.client
+      .from('message_links')
+      .select('*, campaign_messages(*)')
+      .eq('token', token)
+      .single()
+
+
+    await this.client.from('link_clicks').insert([
+      { message_link_id: link.id, user_agent: userAgent || null, ip_address: ipAddress || null }
+    ])
+
+    // A click on the 'request_response' link counts as an inbound response signal
+    if (link.link_type === 'request_response') {
+      await this.client.from('campaign_responses').insert([
+        {
+          campaign_id: link.campaign_messages?.campaign_id,
+          executive_id: link.campaign_messages?.executive_id,
+          inbound_channel: 'link_click',
+          message_body: 'Recipient clicked 'request more information / contact me' link',
+          received_at: new Date().toISOString(),
+          classification: 'interested_click',
+          status: 'new'
+        }
+      ])
+    }
+
+    return {
+      linkType: link.link_type,
+      recipientName: link.campaign_messages?.executive_name || ''
+    }
+  }
+
 
   // Update campaign
   async updateCampaign(campaignId: string, data: any) {
